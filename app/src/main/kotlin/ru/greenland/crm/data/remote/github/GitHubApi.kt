@@ -4,6 +4,7 @@ import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -87,9 +88,19 @@ class GitHubApi @Inject constructor(
                 .url("${baseUrl(settings)}/contents/$path")
                 .put(requestBody.toRequestBody(jsonMediaType))
                 .build()
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw GitHubApiException(response.code, response.body?.string()?.take(300))
-                val parsed = json.decodeFromString(PutContentResponse.serializer(), response.body!!.string())
+            // Когда репозиторий только что был совсем пустым, GitHub иногда ещё не успевает
+            // "увидеть" ветку main, которую сам же создал долей секунды раньше — второй файл
+            // подряд ловит 409 "reference already exists". Одной короткой повторной попытки
+            // достаточно, это не постоянная ошибка, а гонка на его стороне.
+            var response = okHttpClient.newCall(request).execute()
+            if (response.code == 409) {
+                response.close()
+                delay(700)
+                response = okHttpClient.newCall(request).execute()
+            }
+            response.use {
+                if (!it.isSuccessful) throw GitHubApiException(it.code, it.body?.string()?.take(300))
+                val parsed = json.decodeFromString(PutContentResponse.serializer(), it.body!!.string())
                 parsed.content?.sha ?: throw IllegalStateException("GitHub не вернул sha для $path")
             }
         }
@@ -120,7 +131,10 @@ class GitHubApi @Inject constructor(
             .build()
         okHttpClient.newCall(request).execute().use { response ->
             when {
-                response.code == 404 -> emptyList()
+                // 404 — нет такой ветки, 409 — репозиторий вообще пустой (ещё нет ни одного
+                // коммита). GitHub возвращает разные коды в зависимости от случая, для нас
+                // оба значат одно и то же: "пока ничего скачивать".
+                response.code == 404 || response.code == 409 -> emptyList()
                 response.isSuccessful -> {
                     val parsed = json.decodeFromString(GitHubTreeResponse.serializer(), response.body!!.string())
                     parsed.tree.filter { it.type == "blob" }
