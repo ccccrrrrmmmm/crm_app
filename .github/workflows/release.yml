@@ -25,11 +25,13 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Android platform & build-tools
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        # GitHub-хостed раннеры уже несут Android SDK (ANDROID_HOME/ANDROID_SDK_ROOT и
+        # sdkmanager на PATH) — сторонний action тут не нужен и по факту ломается на
+        # устаревшем пакете "tools", которого Google больше не публикует.
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Decode release keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
