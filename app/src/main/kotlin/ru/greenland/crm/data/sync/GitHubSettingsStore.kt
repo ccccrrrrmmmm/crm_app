@@ -21,6 +21,13 @@ private const val KEY_INTERVAL = "sync_interval_minutes"
 const val MIN_SYNC_INTERVAL_MINUTES = 15
 
 /**
+ * Общий репозиторий с данными подставляется по умолчанию, чтобы новому мастеру оставалось
+ * вписать только свой личный токен — не нужно объяснять, куда именно синхронизировать данные.
+ */
+private const val DEFAULT_OWNER = "ccccrrrrmmmm"
+private const val DEFAULT_REPO = "crm_db"
+
+/**
  * Хранит настройки GitHub-синхронизации (владелец/репозиторий/ветка/токен/интервал).
  * Токен — секрет, поэтому весь файл зашифрован (EncryptedSharedPreferences), а не DataStore.
  */
@@ -64,8 +71,8 @@ class GitHubSettingsStore @Inject constructor(
     }
 
     private fun load(): GitHubSettings = GitHubSettings(
-        owner = prefs.getString(KEY_OWNER, "").orEmpty(),
-        repo = prefs.getString(KEY_REPO, "").orEmpty(),
+        owner = prefs.getString(KEY_OWNER, DEFAULT_OWNER).orEmpty(),
+        repo = prefs.getString(KEY_REPO, DEFAULT_REPO).orEmpty(),
         branch = prefs.getString(KEY_BRANCH, "main").orEmpty().ifBlank { "main" },
         token = prefs.getString(KEY_TOKEN, "").orEmpty(),
         syncIntervalMinutes = prefs.getInt(KEY_INTERVAL, 15),

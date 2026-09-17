@@ -1,5 +1,6 @@
 package ru.greenland.crm.ui.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import ru.greenland.crm.ui.orders.OrderDetailScreen
 import ru.greenland.crm.ui.orders.OrderFormScreen
 import ru.greenland.crm.ui.orders.OrdersListScreen
 import ru.greenland.crm.ui.settings.SettingsScreen
+import ru.greenland.crm.ui.update.UpdateBanner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +43,10 @@ fun CrmNavHost() {
     Scaffold(
         topBar = {
             if (isTopLevel) {
-                TopAppBar(title = { Text("Greenland CRM") })
+                Column {
+                    TopAppBar(title = { Text("Greenland CRM") })
+                    UpdateBanner()
+                }
             }
         },
         bottomBar = {

@@ -7,6 +7,11 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+// CI передаёт свои версии через -PappVersionCode / -PappVersionName (растущий номер сборки),
+// локально без них просто используются значения по умолчанию ниже.
+val ciVersionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull()
+val ciVersionName = project.findProperty("appVersionName") as String?
+
 android {
     namespace = "ru.greenland.crm"
     compileSdk = 35
@@ -15,12 +20,26 @@ android {
         applicationId = "ru.greenland.crm"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = ciVersionCode ?: 1
+        versionName = ciVersionName ?: "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        // Секреты подставляет только CI (см. .github/workflows/release.yml); локально без них
+        // release-сборка просто останется подписанной debug-ключом, как раньше.
+        val keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
         }
     }
 
@@ -35,6 +54,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
