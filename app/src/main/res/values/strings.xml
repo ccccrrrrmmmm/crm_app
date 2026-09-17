@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Greenland CRM</string>
+    <string name="notification_channel_sync">Синхронизация Greenland CRM</string>
+</resources>

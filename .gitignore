@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.tools/
+.kotlin/
+app/build/
+
+# Релизная подпись — никогда не коммитим, только через секреты GitHub Actions
+*.jks
+*.keystore
+keystore.properties
