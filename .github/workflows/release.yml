@@ -26,12 +26,15 @@ jobs:
           cache: gradle
 
       - name: Install Android platform & build-tools
-        # GitHub-хостed раннеры уже несут Android SDK (ANDROID_HOME/ANDROID_SDK_ROOT и
-        # sdkmanager на PATH) — сторонний action тут не нужен и по факту ломается на
-        # устаревшем пакете "tools", которого Google больше не публикует.
+        # GitHub-хостed раннеры уже несут Android SDK (переменная ANDROID_HOME) — сторонний
+        # action тут не нужен и по факту ломается на устаревшем пакете "tools", которого
+        # Google больше не публикует. sdkmanager при этом не всегда есть в PATH, поэтому
+        # находим его явно внутри ANDROID_HOME.
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort -r | head -1)
+          echo "sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Decode release keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
