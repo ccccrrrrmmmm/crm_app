@@ -75,29 +75,49 @@ class GitHubApi @Inject constructor(
         }
     }
 
-    /** Создаёт или обновляет файл. Возвращает sha нового блоба. */
+    private fun buildPutRequest(path: String, encodedContent: String, message: String, sha: String?, settings: GitHubSettings): Request {
+        val requestBody = json.encodeToString(
+            PutContentRequest.serializer(),
+            PutContentRequest(message = message, content = encodedContent, sha = sha, branch = settings.branch),
+        )
+        return requestBuilder(settings)
+            .url("${baseUrl(settings)}/contents/$path")
+            .put(requestBody.toRequestBody(jsonMediaType))
+            .build()
+    }
+
+    /**
+     * Создаёт или обновляет файл. Возвращает sha нового блоба.
+     *
+     * `sha` — тот, что мы знаем ЛОКАЛЬНО (или null, если считаем файл новым). Это не всегда
+     * совпадает с тем, что реально на GitHub прямо сейчас: например, когда второе устройство
+     * подключается впервые, его локальный кэш sha ещё пустой, а часть файлов уже запушило
+     * первое устройство. GitHub в таких случаях отвечает 409 или 422 ("sha wasn't supplied").
+     * Вместо того чтобы падать, на такой ответ мы просто спрашиваем у GitHub актуальный sha
+     * и повторяем запрос уже с ним — самовосстановление, не важно, из-за чего именно разъехались.
+     */
     suspend fun putFile(path: String, contentBytes: ByteArray, message: String, sha: String?): String =
         withContext(Dispatchers.IO) {
             val settings = settingsStore.current()
             val encoded = Base64.getEncoder().encodeToString(contentBytes)
-            val requestBody = json.encodeToString(
-                PutContentRequest.serializer(),
-                PutContentRequest(message = message, content = encoded, sha = sha, branch = settings.branch),
-            )
-            val request = requestBuilder(settings)
-                .url("${baseUrl(settings)}/contents/$path")
-                .put(requestBody.toRequestBody(jsonMediaType))
-                .build()
-            // Когда репозиторий только что был совсем пустым, GitHub иногда ещё не успевает
-            // "увидеть" ветку main, которую сам же создал долей секунды раньше — второй файл
-            // подряд ловит 409 "reference already exists". Одной короткой повторной попытки
-            // достаточно, это не постоянная ошибка, а гонка на его стороне.
-            var response = okHttpClient.newCall(request).execute()
+
+            var response = okHttpClient.newCall(buildPutRequest(path, encoded, message, sha, settings)).execute()
+
             if (response.code == 409) {
+                // Только что опустевший репозиторий: GitHub иногда ещё не успевает "увидеть"
+                // ветку main, которую сам же создал долей секунды раньше — короткая пауза
+                // и та же попытка обычно решают дело без похода за настоящим sha.
                 response.close()
                 delay(700)
-                response = okHttpClient.newCall(request).execute()
+                response = okHttpClient.newCall(buildPutRequest(path, encoded, message, sha, settings)).execute()
             }
+
+            if (response.code == 409 || response.code == 422) {
+                response.close()
+                val actualSha = getFile(path)?.sha
+                response = okHttpClient.newCall(buildPutRequest(path, encoded, message, actualSha, settings)).execute()
+            }
+
             response.use {
                 if (!it.isSuccessful) throw GitHubApiException(it.code, it.body?.string()?.take(300))
                 val parsed = json.decodeFromString(PutContentResponse.serializer(), it.body!!.string())
