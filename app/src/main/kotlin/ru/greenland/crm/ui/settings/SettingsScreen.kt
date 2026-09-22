@@ -49,16 +49,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(text = "Резервное копирование в GitHub", style = MaterialTheme.typography.titleMedium)
-        Text(
-            text = "Клиенты, заявки, переписка и фото сохраняются в общий GitHub-репозиторий — " +
-                "это бесплатное облачное хранилище и заодно история изменений. " +
-                "Заявки и клиенты дополнительно сохраняются как текст (.md), их можно открыть " +
-                "прямо на github.com и сразу прочитать.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
         if (uiState.isEditing) {
             EditingForm(uiState = uiState, viewModel = viewModel)
         } else {
@@ -70,15 +60,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 @Composable
 private fun EditingForm(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     val form = uiState.form
-
-    Text(
-        text = "Как добавить нового мастера в систему: на его телефоне ставим это же приложение, " +
-            "вписываем те же владельца и репозиторий, а токен — свой собственный " +
-            "(GitHub → Settings → Developer settings → Personal access tokens → Generate new token, " +
-            "отметить галочку «repo»). Тогда все данные будут в одном месте.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 
     OutlinedTextField(
         value = form.owner,
