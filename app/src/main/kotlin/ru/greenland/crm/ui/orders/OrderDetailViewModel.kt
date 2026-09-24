@@ -119,6 +119,10 @@ class OrderDetailViewModel @Inject constructor(
         viewModelScope.launch { orderPhotoRepository.attach(orderId, file) }
     }
 
+    fun attachPhotoFromGallery(uri: Uri) {
+        viewModelScope.launch { orderPhotoRepository.attachFromUri(orderId, uri) }
+    }
+
     fun deletePhoto(photo: OrderPhotoEntity) {
         viewModelScope.launch { orderPhotoRepository.delete(photo) }
     }

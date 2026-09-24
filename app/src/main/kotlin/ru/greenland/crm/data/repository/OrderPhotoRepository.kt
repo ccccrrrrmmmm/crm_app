@@ -8,7 +8,9 @@ import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import ru.greenland.crm.data.local.dao.OrderPhotoDao
 import ru.greenland.crm.data.local.entity.OrderPhotoEntity
 import ru.greenland.crm.data.sync.GitHubSyncScheduler
@@ -34,6 +36,17 @@ class OrderPhotoRepository @Inject constructor(
 
     fun uriForFile(file: File): Uri =
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+
+    /** Копирует фото, выбранное из галереи (content:// Uri), в собственное хранилище приложения. */
+    suspend fun attachFromUri(orderId: String, uri: Uri) {
+        val file = createPhotoFile()
+        withContext(Dispatchers.IO) {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                file.outputStream().use { output -> input.copyTo(output) }
+            } ?: error("Не удалось прочитать выбранное фото")
+        }
+        attach(orderId, file)
+    }
 
     suspend fun attach(orderId: String, file: File) {
         val now = System.currentTimeMillis()

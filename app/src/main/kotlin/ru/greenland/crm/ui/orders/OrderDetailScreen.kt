@@ -1,6 +1,7 @@
 package ru.greenland.crm.ui.orders
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -81,6 +83,9 @@ fun OrderDetailScreen(
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) pendingPhotoFile?.let(viewModel::confirmPhotoCaptured)
         pendingPhotoFile = null
+    }
+    val pickFromGallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let(viewModel::attachPhotoFromGallery)
     }
 
     val order = uiState.order
@@ -144,6 +149,9 @@ fun OrderDetailScreen(
                         val (file, uri) = viewModel.preparePhotoCapture()
                         pendingPhotoFile = file
                         takePicture.launch(uri)
+                    },
+                    onPickFromGallery = {
+                        pickFromGallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                     onPhotoClick = { previewPhoto = it },
                 )
@@ -271,12 +279,21 @@ private fun OrderSummary(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OrderStatus.entries.forEach { status0 ->
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(OrderStatus.NEW, OrderStatus.IN_PROGRESS, OrderStatus.DONE).forEach { status0 ->
+                    FilterChip(
+                        selected = status == status0,
+                        onClick = { onStatusChange(status0) },
+                        label = { Text(status0.label) },
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
-                    selected = status == status0,
-                    onClick = { onStatusChange(status0) },
-                    label = { Text(status0.label) },
+                    selected = status == OrderStatus.CANCELLED,
+                    onClick = { onStatusChange(OrderStatus.CANCELLED) },
+                    label = { Text(OrderStatus.CANCELLED.label) },
                 )
             }
         }
@@ -330,6 +347,7 @@ private fun OrderSummary(
 private fun PhotosSection(
     photos: List<OrderPhotoEntity>,
     onAddPhoto: () -> Unit,
+    onPickFromGallery: () -> Unit,
     onPhotoClick: (OrderPhotoEntity) -> Unit,
 ) {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
@@ -339,10 +357,17 @@ private fun PhotosSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = "Фото", style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onAddPhoto) {
-                Icon(Icons.Filled.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Снять фото")
+            Row {
+                TextButton(onClick = onPickFromGallery) {
+                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Галерея")
+                }
+                TextButton(onClick = onAddPhoto) {
+                    Icon(Icons.Filled.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Камера")
+                }
             }
         }
         if (photos.isNotEmpty()) {
