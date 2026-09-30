@@ -2,8 +2,11 @@ package ru.greenland.crm.ui.navigation
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -20,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import ru.greenland.crm.ui.broadcast.BroadcastScreen
 import ru.greenland.crm.ui.clients.ClientDetailScreen
 import ru.greenland.crm.ui.clients.ClientFormScreen
 import ru.greenland.crm.ui.clients.ClientsListScreen
@@ -44,7 +48,16 @@ fun CrmNavHost() {
         topBar = {
             if (isTopLevel) {
                 Column {
-                    TopAppBar(title = { Text("Greenland CRM") })
+                    TopAppBar(
+                        title = { Text("Greenland CRM") },
+                        actions = {
+                            IconButton(onClick = {
+                                navController.navigate(Routes.BROADCAST) { launchSingleTop = true }
+                            }) {
+                                Icon(Icons.Filled.Campaign, contentDescription = "Рассылка")
+                            }
+                        },
+                    )
                     UpdateBanner()
                 }
             }
@@ -154,6 +167,10 @@ fun CrmNavHost() {
 
             composable(Routes.SETTINGS) {
                 SettingsScreen()
+            }
+
+            composable(Routes.BROADCAST) {
+                BroadcastScreen(onBack = { navController.popBackStack() })
             }
         }
     }

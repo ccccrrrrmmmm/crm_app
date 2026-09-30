@@ -24,6 +24,8 @@ object Routes {
 
     const val SETTINGS = "settings"
 
+    const val BROADCAST = "broadcast"
+
     fun orderNew(clientId: String? = null) = if (clientId != null) "orders/new?clientId=$clientId" else "orders/new"
     fun orderDetail(orderId: String) = "orders/$orderId"
     fun orderEdit(orderId: String) = "orders/$orderId/edit"
