@@ -25,7 +25,8 @@ data class OrderListItem(
 
 data class OrdersUiState(
     val items: List<OrderListItem> = emptyList(),
-    val filter: OrderStatus? = null,
+    val filter: OrderStatus? = OrderStatus.IN_PROGRESS,
+    val statusOrder: List<OrderStatus> = StatusTabOrderStore.DEFAULT_ORDER,
 )
 
 @HiltViewModel
@@ -33,16 +34,19 @@ class OrdersListViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     clientRepository: ClientRepository,
     masterRepository: MasterRepository,
+    private val tabOrderStore: StatusTabOrderStore,
 ) : ViewModel() {
 
-    private val filter = MutableStateFlow<OrderStatus?>(null)
+    // По умолчанию открываемся сразу на «В работе» — мастеру не нужно самому переключаться.
+    private val filter = MutableStateFlow<OrderStatus?>(OrderStatus.IN_PROGRESS)
 
     val uiState: StateFlow<OrdersUiState> = combine(
         orderRepository.observeAll(),
         clientRepository.observeAll(),
         masterRepository.observeAll(),
         filter,
-    ) { orders, clients, masters, currentFilter ->
+        tabOrderStore.order,
+    ) { orders, clients, masters, currentFilter, statusOrder ->
         val clientNames = clients.associateBy(ClientEntity::id)
         val masterNames = masters.associateBy(MasterEntity::id)
         val filtered = if (currentFilter == null) orders else orders.filter { it.status == currentFilter }
@@ -55,10 +59,16 @@ class OrdersListViewModel @Inject constructor(
                 )
             },
             filter = currentFilter,
+            statusOrder = statusOrder,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OrdersUiState())
 
     fun setFilter(status: OrderStatus?) {
         filter.value = status
+    }
+
+    /** Сохраняет новый порядок вкладок-статусов после перетаскивания. */
+    fun setStatusOrder(order: List<OrderStatus>) {
+        tabOrderStore.setOrder(order)
     }
 }
